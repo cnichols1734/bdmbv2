@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white p-8 rounded shadow">
+    <h1 class="text-2xl font-bold mb-6 text-gray-800">Edit Post</h1>
+
+    <form id="editForm" action="{{ url_for('edit_post', post_id=post.id) }}" method="post" enctype="multipart/form-data" class="space-y-6">
+        <!-- Post Password Field -->
+        <div class="bg-gray-50 p-4 rounded">
+            <label for="post_password" class="block text-sm font-medium text-gray-700 mb-1">Post Password:</label>
+            <input
+                type="text"
+                id="post_password"
+                name="post_password"
+                required
+                class="w-full border border-gray-300 rounded px-3 py-2"
+                placeholder="Enter the password you used when creating the post"
+            >
+        </div>
+
+        <!-- Title Field -->
+        <div>
+            <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Title:</label>
+            <input
+                type="text"
+                id="title"
+                name="title"
+                value="{{ post.title }}"
+                required
+                class="w-full border border-gray-300 rounded px-3 py-2"
+            >
+        </div>
+
+        <!-- Description Field -->
+        <div>
+            <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description:</label>
+            <textarea
+                id="description"
+                name="description"
+                rows="3"
+                required
+                class="w-full border border-gray-300 rounded px-3 py-2"
+            >{{ post.description }}</textarea>
+        </div>
+
+        <!-- Phone Field (Optional) -->
+        <div>
+            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number <span class="text-gray-500 font-normal">(Optional)</span>:
+            </label>
+            <input
+                type="tel"
+                id="phone"
+                name="phone"
+                value="{{ post.phone or '' }}"
+                class="w-full border border-gray-300 rounded px-3 py-2"
+                placeholder="Enter your phone number"
+            >
+        </div>
+
+        <!-- Email Field (Optional) -->
+        <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+                Email <span class="text-gray-500 font-normal">(Optional)</span>:
+            </label>
+            <input
+                type="email"
+                id="email"
+                name="email"
+                value="{{ post.email or '' }}"
+                class="w-full border border-gray-300 rounded px-3 py-2"
+                placeholder="Enter your email address"
+            >
+        </div>
+
+        <!-- Price Field -->
+        <div>
+            <label for="price" class="block text-sm font-medium text-gray-700 mb-1">Price:</label>
+            <input
+                type="number"
+                id="price"
+                name="price"
+                step="0.01"
+                value="{{ post.price }}"
+                required
+                class="w-full border border-gray-300 rounded px-3 py-2"
+            >
+        </div>
+
+        <!-- Category Field -->
+        <div>
+            <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Category:</label>
+            <select
+                id="category"
+                name="category"
+                required
+                class="w-full border border-gray-300 rounded px-3 py-2"
+            >
+                <option value="Guns" {% if post.category == "Guns" %}selected{% endif %}>Guns</option>
+                <option value="Hunting & Fishing" {% if post.category == "Hunting & Fishing" %}selected{% endif %}>Hunting & Fishing</option>
+                <option value="Misc" {% if post.category == "Misc" %}selected{% endif %}>Misc</option>
+            </select>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+            <div class="flex gap-4">
+                <button
+                    type="submit"
+                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                    Save Changes
+                </button>
+                <a
+                    href="{{ url_for('post', post_id=post.id) }}"
+                    class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition">
+                    Cancel
+                </a>
+            </div>
+            <button
+                type="button"
+                onclick="confirmDelete()"
+                class="text-red-600 hover:text-red-800 transition">
+                Delete Post
+            </button>
+        </div>
+    </form>
+
+    <!-- Delete Form (Hidden) -->
+    <form id="deleteForm" action="{{ url_for('delete_post', post_id=post.id) }}" method="post" class="hidden">
+        <input type="text" name="post_password" id="delete_password">
+    </form>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Delete Post</h3>
+                <div class="mt-2 px-7 py-3">
+                    <p class="text-sm text-gray-500">
+                        Are you sure you want to delete this post? This action cannot be undone.
+                    </p>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button
+                        id="deleteConfirm"
+                        class="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                        Yes, Delete Post
+                    </button>
+                    <button
+                        onclick="closeDeleteModal()"
+                        class="ml-3 px-4 py-2 bg-gray-100 text-gray-700 text-base font-medium rounded-md shadow-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mt-2">Incorrect Password</h3>
+                <div class="mt-2 px-7 py-3">
+                    <p class="text-sm text-gray-500">
+                        The password you entered is incorrect. Please try again.
+                    </p>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button
+                        onclick="closeErrorModal()"
+                        class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        OK
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Check for flash messages when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                {% if 'incorrect password' in message.lower() %}
+                    document.getElementById('errorModal').classList.remove('hidden');
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+});
+
+function confirmDelete() {
+    const password = document.getElementById('post_password').value;
+    if (!password) {
+        document.getElementById('errorModal').classList.remove('hidden');
+        return;
+    }
+    document.getElementById('delete_password').value = password;
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+}
+
+function closeErrorModal() {
+    document.getElementById('errorModal').classList.add('hidden');
+}
+
+document.getElementById('deleteConfirm').addEventListener('click', function() {
+    document.getElementById('deleteForm').submit();
+});
+</script>
+{% endblock %}

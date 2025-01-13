@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto mt-8 mb-12">
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <!-- Header Section -->
+        <div class="px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700">
+            <h1 class="text-xl font-semibold text-white">Create New Post</h1>
+            <p class="text-blue-100 text-sm mt-1">
+                <span class="text-red-300">*</span> indicates required field
+            </p>
+        </div>
+
+        <form action="{{ url_for('create_post') }}" method="post" enctype="multipart/form-data" class="p-6 space-y-6">
+            <!-- Title Section -->
+            <div class="space-y-4">
+                <label for="title" class="block text-sm font-medium text-gray-700">
+                    Title <span class="text-red-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    required
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="Enter a descriptive title"
+                >
+            </div>
+
+            <!-- Description Section -->
+            <div class="space-y-4">
+                <label for="description" class="block text-sm font-medium text-gray-700">
+                    Description <span class="text-red-500">*</span>
+                </label>
+                <textarea
+                    id="description"
+                    name="description"
+                    rows="4"
+                    required
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="Provide detailed information about your item"
+                ></textarea>
+            </div>
+
+            <!-- Contact Information Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <label for="phone" class="block text-sm font-medium text-gray-700">
+                        Phone Number <span class="text-gray-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        placeholder="(123) 456-7890"
+                    >
+                </div>
+
+                <div class="space-y-4">
+                    <label for="email" class="block text-sm font-medium text-gray-700">
+                        Email <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        required
+                        class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        placeholder="your@email.com"
+                    >
+                    <p class="text-sm text-blue-600">
+                        <i class="fas fa-bell mr-1"></i>
+                        You'll receive email notifications when someone comments on your post
+                    </p>
+                </div>
+            </div>
+
+            <!-- Price and Category Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <label for="price" class="block text-sm font-medium text-gray-700">
+                        Price <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2.5 text-gray-500">$</span>
+                        <input
+                            type="number"
+                            id="price"
+                            name="price"
+                            step="0.01"
+                            required
+                            class="w-full border border-gray-300 rounded-lg pl-8 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                            placeholder="0.00"
+                        >
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <label for="category" class="block text-sm font-medium text-gray-700">
+                        Category <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                        id="category"
+                        name="category"
+                        required
+                        class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white"
+                    >
+                        <option value="" disabled selected>Select a category</option>
+                        <option value="Guns">Guns</option>
+                        <option value="Hunting & Fishing">Hunting & Fishing</option>
+                        <option value="Misc">Misc</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Updated Post Password Section -->
+            <div class="bg-blue-50 rounded-lg p-4 space-y-4 border border-blue-100">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <label for="post_password" class="block text-sm font-medium text-gray-700">
+                        Post Password <span class="text-red-500">*</span>
+                    </label>
+                </div>
+                <input
+                    type="text"
+                    id="post_password"
+                    name="post_password"
+                    required
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white"
+                    placeholder="Create a password to edit/delete later"
+                >
+                <p class="text-sm text-gray-600">This password will be required to edit or delete your post later</p>
+            </div>
+
+            <!-- Photos Section -->
+            <div class="space-y-4">
+                <label class="block text-sm font-medium text-gray-700">
+                    Photos <span class="text-gray-400 font-normal">(First photo required)</span>
+                </label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for i in range(1, 5) %}
+                    <div class="relative group">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs text-gray-500">
+                                Photo {{ i }} {% if i == 1 %}<span class="text-red-500">*</span>{% endif %}
+                            </span>
+                            <span class="text-xs text-gray-400">{% if i == 1 %}Required{% else %}Optional{% endif %}</span>
+                        </div>
+                        <input
+                            type="file"
+                            id="photo{{ i }}"
+                            name="photo{{ i }}"
+                            accept="image/*"
+                            {% if i == 1 %}required{% endif %}
+                            class="block w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors
+                                   file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium
+                                   file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                        >
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="pt-6">
+                <button
+                    type="submit"
+                    class="w-full bg-blue-600 text-white font-medium px-6 py-3 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                >
+                    Create Post
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -133,6 +133,32 @@
         background: #1a1a1a;
         transform: translateY(-1px);
     }
+
+    @media (max-width: 768px) {
+        .listing-image-wrapper {
+            position: relative;
+            touch-action: pan-y pinch-zoom;
+            overflow: hidden;
+        }
+
+        .mobile-nav-visible {
+            opacity: 1 !important;
+        }
+
+        /* Show navigation elements on mobile by default if there are multiple photos */
+        .mobile-show-nav {
+            opacity: 0.9 !important;
+        }
+    }
+
+    /* Add smooth transition for images */
+    .listing-image {
+        transition: transform 0.3s ease-out;
+    }
+
+    .swiping {
+        transition: none !important;
+    }
 </style>
 
 <!-- Add to Home Screen Banner -->
@@ -224,14 +250,45 @@
 <div class="max-w-7xl mx-auto">
     <div class="listing-grid">
         {% for post in posts %}
-        <div class="listing-card cursor-pointer" onclick="window.location.href='{{ url_for('post', post_id=post.id) }}'">
+        <div class="listing-card cursor-pointer relative group" onclick="window.location.href='{{ url_for('post', post_id=post.id) }}'">
             {% if post.photos[0] %}
-            <img
-                src="{{ url_for('static', filename='uploads/' + post.photos[0].filename) }}"
-                alt="{{ post.title }}"
-                loading="lazy"
-                class="listing-image"
-            >
+            <div class="relative">
+                <!-- Image -->
+                <div class="listing-image-wrapper">
+                    <img
+                        src="{{ url_for('static', filename='uploads/' + post.photos[0].filename) }}"
+                        alt="{{ post.title }}"
+                        loading="lazy"
+                        class="listing-image"
+                        data-post-id="{{ post.id }}"
+                    >
+                    
+                    <!-- Navigation Arrows -->
+                    {% if post.photos|length > 1 %}
+                    <div class="absolute inset-0 opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-between px-2 {% if post.photos|length > 1 %}mobile-show-nav md:opacity-0{% endif %}">
+                        <button onclick="prevImage(event, {{ post.id }})" 
+                                class="p-2 rounded-full bg-white/80 hover:bg-white shadow-lg transition transform hover:scale-105">
+                            <svg class="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <button onclick="nextImage(event, {{ post.id }})" 
+                                class="p-2 rounded-full bg-white/80 hover:bg-white shadow-lg transition transform hover:scale-105">
+                            <svg class="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <!-- Pagination Dots -->
+                    <div class="absolute bottom-2 left-0 right-0 flex justify-center space-x-1.5 {% if post.photos|length > 1 %}mobile-show-nav md:opacity-0{% endif %} opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+                        {% for photo in post.photos %}
+                        <div class="w-1.5 h-1.5 rounded-full {% if loop.index0 == 0 %}bg-white{% else %}bg-white/80{% endif %} shadow-sm" data-dot-index="{{ loop.index0 }}"></div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
             {% endif %}
             <div class="listing-details">
                 <div class="flex items-start justify-between mb-3">
@@ -350,6 +407,25 @@
     </div>
 </div>
 
+<!-- Initialize post images data -->
+<script id="post-images-data" type="application/json">
+{
+    {% for post in posts %}
+        "{{ post.id }}": {
+            "images": [
+                {% for photo in post.photos %}
+                    {
+                        "src": "{{ url_for('static', filename='uploads/' + photo.filename) }}",
+                        "id": {{ photo.id }},
+                        "filename": "{{ photo.filename }}"
+                    }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]
+        }{% if not loop.last %},{% endif %}
+    {% endfor %}
+}
+</script>
+
 <script>
 function timeAgo(dateString) {
     const date = new Date(dateString);
@@ -427,5 +503,177 @@ function detectMobileAndBrowser() {
 }
 
 document.addEventListener('DOMContentLoaded', detectMobileAndBrowser);
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Load post images data from the JSON script tag
+    const postImagesData = JSON.parse(document.getElementById('post-images-data').textContent);
+    const currentImageIndex = {};
+    const preloadedImages = {};
+
+    // Convert the data structure for easier use
+    const postImages = Object.fromEntries(
+        Object.entries(postImagesData).map(([postId, data]) => [
+            postId,
+            data.images.map(img => img.src)
+        ])
+    );
+
+    // Preload images for posts with multiple photos
+    function preloadImages() {
+        Object.entries(postImagesData).forEach(([postId, data]) => {
+            if (data.images.length > 1) {
+                preloadedImages[postId] = data.images.map((img, index) => {
+                    if (index === 0) return null; // Skip first image as it's already loaded
+                    const imgEl = new Image();
+                    imgEl.src = img.src;
+                    return imgEl;
+                });
+            }
+        });
+    }
+
+    // Start preloading after a short delay to not block initial page load
+    setTimeout(preloadImages, 500);
+
+    // Update the updateImage function to use preloaded images
+    function updateImage(postId) {
+        const card = document.querySelector(`.listing-card[onclick*="${postId}"]`);
+        const img = card.querySelector('img');
+        const dots = card.querySelectorAll('[data-dot-index]');
+        const imageData = postImagesData[postId].images[currentImageIndex[postId]];
+        const newSrc = imageData.src;
+        
+        // Add loading state
+        img.style.opacity = '0.7';
+        
+        // If the image is preloaded and loaded, use it immediately
+        if (preloadedImages[postId] && preloadedImages[postId][currentImageIndex[postId]]) {
+            const preloadedImg = preloadedImages[postId][currentImageIndex[postId]];
+            if (preloadedImg.complete) {
+                img.src = newSrc;
+                img.style.opacity = '1';
+            } else {
+                // If still loading, wait for it
+                preloadedImg.onload = () => {
+                    img.src = newSrc;
+                    img.style.opacity = '1';
+                };
+            }
+        } else {
+            // Fallback for first image or if not preloaded
+            img.src = newSrc;
+            img.onload = () => {
+                img.style.opacity = '1';
+            };
+        }
+        
+        // Update dots
+        dots.forEach((dot, index) => {
+            if (index === currentImageIndex[postId]) {
+                dot.classList.add('bg-white');
+                dot.classList.remove('bg-white/80');
+            } else {
+                dot.classList.add('bg-white/80');
+                dot.classList.remove('bg-white');
+            }
+        });
+    }
+
+    // Touch handling variables
+    let touchStartX = 0;
+    let touchEndX = 0;
+    let currentTranslateX = 0;
+    let isDragging = false;
+    let startTime = 0;
+    const swipeThreshold = 50; // minimum distance for a swipe
+    const swipeTimeThreshold = 300; // maximum time for a swipe in ms
+
+    function handleTouchStart(e, postId) {
+        const img = e.target;
+        if (!postImages[postId] || postImages[postId].length <= 1) return;
+        
+        touchStartX = e.touches[0].clientX;
+        startTime = Date.now();
+        isDragging = true;
+        currentTranslateX = 0;
+        
+        img.classList.add('swiping');
+        e.preventDefault(); // Prevent default only if we have multiple images
+    }
+
+    function handleTouchMove(e, postId) {
+        if (!isDragging || !postImages[postId] || postImages[postId].length <= 1) return;
+        
+        const img = e.target;
+        const deltaX = e.touches[0].clientX - touchStartX;
+        currentTranslateX = deltaX;
+        
+        // Add resistance at the edges
+        if (currentImageIndex[postId] === 0 && deltaX > 0 || 
+            currentImageIndex[postId] === postImages[postId].length - 1 && deltaX < 0) {
+            currentTranslateX = deltaX / 3; // Add resistance
+        }
+        
+        img.style.transform = `translateX(${currentTranslateX}px)`;
+        e.preventDefault();
+    }
+
+    function handleTouchEnd(e, postId) {
+        if (!isDragging || !postImages[postId] || postImages[postId].length <= 1) return;
+        
+        const img = e.target;
+        isDragging = false;
+        const deltaX = currentTranslateX;
+        const timeElapsed = Date.now() - startTime;
+        
+        img.classList.remove('swiping');
+        img.style.transform = '';
+        
+        if (Math.abs(deltaX) > swipeThreshold && timeElapsed < swipeTimeThreshold) {
+            // Fast swipe
+            if (deltaX > 0) {
+                prevImage(e, postId);
+            } else {
+                nextImage(e, postId);
+            }
+        } else if (Math.abs(deltaX) > img.offsetWidth / 3) {
+            // Drag more than 1/3 of the width
+            if (deltaX > 0) {
+                prevImage(e, postId);
+            } else {
+                nextImage(e, postId);
+            }
+        }
+        
+        e.preventDefault();
+    }
+
+    // Add touch event listeners to all images
+    document.querySelectorAll('.listing-image').forEach(img => {
+        const postId = img.dataset.postId;
+        img.addEventListener('touchstart', (e) => handleTouchStart(e, postId), { passive: false });
+        img.addEventListener('touchmove', (e) => handleTouchMove(e, postId), { passive: false });
+        img.addEventListener('touchend', (e) => handleTouchEnd(e, postId), { passive: false });
+    });
+
+    // Existing image navigation code
+    window.prevImage = function(event, postId) {
+        event.stopPropagation();
+        if (!currentImageIndex[postId]) {
+            currentImageIndex[postId] = 0;
+        }
+        currentImageIndex[postId] = (currentImageIndex[postId] - 1 + postImages[postId].length) % postImages[postId].length;
+        updateImage(postId);
+    };
+
+    window.nextImage = function(event, postId) {
+        event.stopPropagation();
+        if (!currentImageIndex[postId]) {
+            currentImageIndex[postId] = 0;
+        }
+        currentImageIndex[postId] = (currentImageIndex[postId] + 1) % postImages[postId].length;
+        updateImage(postId);
+    };
+});
 </script>
 {% endblock %}

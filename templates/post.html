@@ -131,31 +131,42 @@
 </div>
 
 <!-- Updated Image Modal -->
-<div id="imageModal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-50">
+<div id="imageModal" class="fixed inset-0 bg-black bg-opacity-95 hidden items-center justify-center z-50">
     <div class="relative w-full h-full flex items-center justify-center">
         <!-- Close Button -->
-        <button onclick="closeModal()" class="absolute top-4 right-4 text-white hover:text-gray-300 transition z-50 p-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+        <button onclick="closeModal()" class="absolute top-6 right-6 text-white hover:text-gray-300 transition z-50">
+            <div class="bg-black/40 hover:bg-black/60 rounded-full p-2 backdrop-blur-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </div>
         </button>
 
         <!-- Navigation Arrows -->
-        <button onclick="navigate(-1)" class="hidden sm:block absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition z-50">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
+        <button onclick="navigate(-1)" class="hidden sm:block absolute left-6 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition z-50">
+            <div class="bg-black/40 hover:bg-black/60 rounded-full p-3 backdrop-blur-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </div>
         </button>
 
-        <button onclick="navigate(1)" class="hidden sm:block absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition z-50">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
+        <button onclick="navigate(1)" class="hidden sm:block absolute right-6 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition z-50">
+            <div class="bg-black/40 hover:bg-black/60 rounded-full p-3 backdrop-blur-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </div>
         </button>
 
         <!-- Image Container -->
-        <div id="imageContainer" class="w-full h-full flex items-center justify-center">
-            <img id="modalImage" src="" alt="Full size photo" class="max-h-[90vh] max-w-full object-contain select-none">
+        <div id="imageContainer" class="w-full h-full flex items-center justify-center px-4 sm:px-12">
+            <img id="modalImage" src="" alt="Full size photo" class="max-h-[85vh] max-w-[85vw] object-contain select-none rounded-lg">
+        </div>
+
+        <!-- Image Counter -->
+        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm">
+            <span id="currentImageNumber">1</span> / <span id="totalImages">{{ post.photos|length }}</span>
         </div>
     </div>
 </div>
@@ -184,6 +195,7 @@ function openModal(imageSrc, index) {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     modalImage.src = imageSrc;
+    document.getElementById('currentImageNumber').textContent = index + 1;
     document.body.style.overflow = 'hidden';
     resetZoom();
 }
@@ -205,6 +217,7 @@ function navigate(direction) {
     if (currentScale > 1) return; // Prevent navigation while zoomed
     currentImageIndex = (currentImageIndex + direction + images.length) % images.length;
     modalImage.src = images[currentImageIndex].src;
+    document.getElementById('currentImageNumber').textContent = currentImageIndex + 1;
     resetZoom();
 }
 

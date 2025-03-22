@@ -10,6 +10,7 @@ import threading
 import pytz
 import logging
 from logging.handlers import RotatingFileHandler
+from sqlalchemy import inspect
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///new_database_V4.db'
@@ -56,11 +57,29 @@ os.makedirs(upload_folder, exist_ok=True)
 
 db = SQLAlchemy(app)
 
+# Define a function to ensure tables exist
+def ensure_tables_exist():
+    inspector = inspect(db.engine)
+    existing_tables = inspector.get_table_names()
+    
+    if 'post_like' not in existing_tables:
+        app.logger.info("Creating post_like table as part of database migration")
+        db.metadata.tables['post_like'].create(db.engine)
+
 class Photo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(255))
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class PostLike(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+    user_uuid = db.Column(db.String(36), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Composite unique constraint to prevent duplicate likes
+    __table_args__ = (db.UniqueConstraint('post_id', 'user_uuid', name='_post_user_like_uc'),)
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -70,6 +89,7 @@ class Post(db.Model):
     category = db.Column(db.String(20), nullable=False)
     photos = db.relationship('Photo', backref='post', lazy=True)
     comments = db.relationship('Comment', back_populates='post', cascade='all, delete')
+    likes = db.relationship('PostLike', backref='post', lazy='dynamic', cascade='all, delete')
     uuid = db.Column(db.String(36), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     post_password = db.Column(db.String(255), nullable=True)
@@ -293,19 +313,34 @@ def index():
         posts = pagination.items
         total_pages = pagination.pages
         current_page = page
+        
+        # Get user_uuid from session for likes
+        user_uuid = session.get('uuid')
+        liked_post_ids = []
+        
+        # Try to get liked posts, but don't crash if post_like table doesn't exist yet
+        try:
+            if user_uuid:
+                # Get list of post IDs that the user has liked
+                liked_post_ids = [like.post_id for like in PostLike.query.filter_by(user_uuid=user_uuid).all()]
+        except Exception as e:
+            app.logger.error(f"Error getting liked posts: {e}")
+            # Just use an empty list if there's an error
 
     except Exception as e:
         app.logger.error(f"Error in index route: {e}")
         posts = []
         total_pages = 1
         current_page = 1
+        liked_post_ids = []
 
     return render_template('index.html',
                          posts=posts,
                          current_page=current_page,
                          total_pages=total_pages,
                          search=search,
-                         category=category)
+                         category=category,
+                         liked_post_ids=liked_post_ids)
 
 @app.route('/post/<int:post_id>', methods=['GET', 'POST'])
 def post(post_id):
@@ -313,6 +348,19 @@ def post(post_id):
         post = Post.query.get(post_id)
         if post is None:
             return render_template('post_not_found.html'), 404
+
+        # Get user_uuid from session for likes
+        user_uuid = session.get('uuid')
+        user_liked = False
+        
+        # Try to check if user liked the post, but don't crash if post_like table doesn't exist yet
+        try:
+            if user_uuid:
+                # Check if user liked this post
+                user_liked = PostLike.query.filter_by(post_id=post.id, user_uuid=user_uuid).first() is not None
+        except Exception as e:
+            app.logger.error(f"Error checking if user liked post: {e}")
+            # Just assume not liked if there's an error
 
         if request.method == 'POST':
             # Add comment
@@ -325,7 +373,7 @@ def post(post_id):
             send_comment_notification(post, new_comment)
 
             return redirect(url_for('post', post_id=post.id))
-        return render_template('post.html', post=post, timedelta=timedelta)
+        return render_template('post.html', post=post, timedelta=timedelta, user_liked=user_liked)
     except Exception as e:
         app.logger.error(f"Error in post route: {e}")
         flash('An error occurred while processing your request.', 'error')
@@ -463,8 +511,57 @@ def edit_post(post_id):
         flash('An error occurred while editing the post.', 'error')
         return redirect(url_for('post', post_id=post_id))
 
+@app.route('/post/<int:post_id>/like', methods=['POST'])
+def like_post(post_id):
+    try:
+        post = Post.query.get_or_404(post_id)
+        
+        # Ensure user has a UUID
+        user_uuid = session.get('uuid')
+        if not user_uuid:
+            user_uuid = str(uuid.uuid4())
+            session['uuid'] = user_uuid
+        
+        # Make sure post_like table exists before attempting to use it
+        ensure_tables_exist()
+            
+        # Check if user already liked this post
+        existing_like = PostLike.query.filter_by(post_id=post_id, user_uuid=user_uuid).first()
+        
+        if existing_like:
+            # User already liked this post, so unlike it
+            db.session.delete(existing_like)
+            action = 'unliked'
+        else:
+            # User hasn't liked this post yet, add like
+            new_like = PostLike(post_id=post_id, user_uuid=user_uuid)
+            db.session.add(new_like)
+            action = 'liked'
+            
+        db.session.commit()
+        
+        # If it's an AJAX request, return JSON response
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            like_count = PostLike.query.filter_by(post_id=post_id).count()
+            return {'success': True, 'action': action, 'likeCount': like_count}
+            
+        # Otherwise redirect back to the referring page
+        referer = request.headers.get('Referer')
+        if referer and (url_for('index') in referer or url_for('post', post_id=post.id) in referer):
+            return redirect(referer)
+        return redirect(url_for('post', post_id=post.id))
+        
+    except Exception as e:
+        app.logger.error(f"Error in like_post route: {e}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return {'success': False, 'error': 'An error occurred while processing your request.'}
+        flash('An error occurred while processing your request.', 'error')
+        return redirect(url_for('index'))
+
+# Initialize database tables (including any new ones like PostLike)
+with app.app_context():
+    db.create_all()
+    ensure_tables_exist()
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(host="0.0.0.0", port=5005, debug=True)

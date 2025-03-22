@@ -24,15 +24,36 @@
     <div class="flex justify-between items-start mb-4">
         <h1 class="text-2xl md:text-3xl font-bold text-gray-800">{{ post.title }}</h1>
         <div class="flex items-center space-x-2">
-<button
-    onclick="sharePost()"
-    class="inline-flex items-center space-x-1 md:space-x-2 px-2 md:px-4 py-1.5 md:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm md:text-base"
->
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-    </svg>
-    <span>Share</span>
-</button>
+            <!-- Like Button -->
+            <form action="{{ url_for('like_post', post_id=post.id) }}" method="POST" 
+                  onsubmit="likePost(event, {{ post.id }})" class="like-form">
+                <button type="submit" class="like-button inline-flex items-center space-x-1 px-2 md:px-4 py-1.5 md:py-2 
+                            {% if user_liked %}bg-red-100 text-red-500{% else %}bg-gray-100 text-gray-600{% endif %} 
+                            rounded-lg hover:bg-red-100 hover:text-red-500 transition font-medium text-sm md:text-base">
+                    <svg class="h-4 w-4 md:h-5 md:w-5 {% if user_liked %}text-red-500 fill-current{% endif %}" 
+                         fill="{% if user_liked %}currentColor{% else %}none{% endif %}" 
+                         stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    <span class="like-count ml-1" data-post-id="{{ post.id }}">
+                        {% if post.likes is defined %}
+                            {{ post.likes.count() }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </span>
+                </button>
+            </form>
+            <button
+                onclick="sharePost()"
+                class="inline-flex items-center space-x-1 md:space-x-2 px-2 md:px-4 py-1.5 md:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm md:text-base"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                </svg>
+                <span>Share</span>
+            </button>
             {% if post.post_password %}
             <a href="{{ url_for('edit_post', post_id=post.id) }}"
                class="text-gray-500 hover:text-gray-700 transition ml-4">
@@ -398,5 +419,40 @@ function updateTimestamps() {
 // Update timestamps immediately and every 30 seconds
 updateTimestamps();
 setInterval(updateTimestamps, 30000);
+
+// Like post functionality
+function likePost(event, postId) {
+    event.preventDefault();
+    
+    fetch("/post/" + postId + "/like", {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            // Update all like count elements for this post
+            var likeCountElements = document.querySelectorAll(".like-count[data-post-id='" + postId + "']");
+            for (var i = 0; i < likeCountElements.length; i++) {
+                likeCountElements[i].textContent = data.likeCount;
+            }
+            
+            // Update the like button icon
+            var likeButton = document.querySelector('.like-button svg');
+            if (data.action === 'liked') {
+                likeButton.classList.add('text-red-500', 'fill-current');
+                likeButton.setAttribute('fill', 'currentColor');
+            } else {
+                likeButton.classList.remove('text-red-500', 'fill-current');
+                likeButton.setAttribute('fill', 'none');
+            }
+        }
+    })
+    .catch(function(error) {
+        console.error('Error:', error);
+    });
+}
 </script>
 {% endblock %}

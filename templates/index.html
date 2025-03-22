@@ -306,11 +306,37 @@
                             {{ post.category }}
                         </span>
                     </div>
-                    <div class="flex items-center text-gray-500">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                        </svg>
-                        <span class="text-sm">{{ post.comments|length }}</span>
+                    <div class="flex items-center text-gray-500 space-x-3">
+                        <!-- Comments counter -->
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                            </svg>
+                            <span class="text-sm">{{ post.comments|length }}</span>
+                        </div>
+                        
+                        <!-- Like button and counter -->
+                        <div class="flex items-center">
+                            <form action="{{ url_for('like_post', post_id=post.id) }}" method="POST" 
+                                  onsubmit="likePost(event, {{ post.id }})" class="like-form flex items-center">
+                                <button type="submit" class="like-button flex items-center" 
+                                        onclick="event.stopPropagation()">
+                                    <svg class="w-4 h-4 mr-1 {% if post.id in liked_post_ids %}text-red-500 fill-current{% endif %}" 
+                                         fill="{% if post.id in liked_post_ids %}currentColor{% else %}none{% endif %}" 
+                                         stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                    </svg>
+                                    <span class="text-sm like-count" data-post-id="{{ post.id }}">
+                                        {% if post.likes is defined %}
+                                            {{ post.likes.count() }}
+                                        {% else %}
+                                            0
+                                        {% endif %}
+                                    </span>
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -675,5 +701,43 @@ document.addEventListener('DOMContentLoaded', function() {
         updateImage(postId);
     };
 });
+
+// Like post functionality
+function likePost(event, postId) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    fetch(`/post/${postId}/like`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            // Update all like count elements for this post
+            const likeCountElements = document.querySelectorAll(`.like-count[data-post-id="${postId}"]`);
+            likeCountElements.forEach(function(element) {
+                element.textContent = data.likeCount;
+            });
+            
+            // Update all like button icons for this post
+            const likeButtons = document.querySelectorAll(`.listing-card[onclick*="${postId}"] .like-button svg`);
+            likeButtons.forEach(function(icon) {
+                if (data.action === 'liked') {
+                    icon.classList.add('text-red-500', 'fill-current');
+                    icon.setAttribute('fill', 'currentColor');
+                } else {
+                    icon.classList.remove('text-red-500', 'fill-current');
+                    icon.setAttribute('fill', 'none');
+                }
+            });
+        }
+    })
+    .catch(function(error) {
+        console.error('Error:', error);
+    });
+}
 </script>
 {% endblock %}

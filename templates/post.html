@@ -27,21 +27,25 @@
             <!-- Like Button -->
             <form action="{{ url_for('like_post', post_id=post.id) }}" method="POST" 
                   onsubmit="likePost(event, {{ post.id }})" class="like-form">
-                <button type="submit" class="like-button inline-flex items-center space-x-1 px-2 md:px-4 py-1.5 md:py-2 
-                            {% if user_liked %}bg-red-100 text-red-500{% else %}bg-gray-100 text-gray-600{% endif %} 
-                            rounded-lg hover:bg-red-100 hover:text-red-500 transition font-medium text-sm md:text-base">
-                    <svg class="h-4 w-4 md:h-5 md:w-5 {% if user_liked %}text-red-500 fill-current{% endif %}" 
+                <button type="submit" class="like-button inline-flex items-center space-x-2 px-3 md:px-4 py-2 md:py-2.5 
+                            {% if user_liked %}bg-blue-100 text-blue-500{% else %}bg-gray-100 text-gray-600{% endif %} 
+                            rounded-lg hover:bg-blue-100 hover:text-blue-500 transition-all duration-300 font-medium text-sm md:text-base shadow-sm">
+                    <svg class="h-5 w-5 md:h-5 md:w-5 transition-all duration-300 transform {% if user_liked %}text-blue-500 fill-current{% endif %}" 
                          fill="{% if user_liked %}currentColor{% else %}none{% endif %}" 
-                         stroke="currentColor" viewBox="0 0 24 24">
+                         stroke="currentColor" viewBox="0 0 24 24"
+                         data-post-id="{{ post.id }}">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                              d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
                     </svg>
-                    <span class="like-count ml-1" data-post-id="{{ post.id }}">
-                        {% if post.likes is defined %}
-                            {{ post.likes.count() }}
-                        {% else %}
-                            0
-                        {% endif %}
+                    <span>
+                        <span class="like-count mr-1 font-semibold" data-post-id="{{ post.id }}">
+                            {% if post.likes is defined %}
+                                {{ post.likes.count() }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </span>
+                        <span class="hidden sm:inline">{{ 'Unlike' if user_liked else 'Like' }}</span>
                     </span>
                 </button>
             </form>
@@ -191,6 +195,100 @@
         </div>
     </div>
 </div>
+
+<style>
+/* Like Button Animation */
+@keyframes heart-burst {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+.heart-animate {
+    animation: heart-burst 0.45s ease-in-out;
+}
+
+/* Like Count Animation */
+@keyframes count-change {
+    0% { transform: translateY(0); opacity: 1; }
+    20% { transform: translateY(-5px); opacity: 0.8; }
+    100% { transform: translateY(0); opacity: 1; }
+}
+
+.count-animate {
+    animation: count-change 0.3s ease-out;
+}
+
+/* Thumbs up particles effect */
+.heart-particle {
+    position: absolute;
+    pointer-events: none;
+    color: #3b82f6; /* Blue color for thumbs up */
+    font-size: 16px;
+    user-select: none;
+    will-change: transform, opacity;
+    animation: float-up 1s ease-out forwards;
+    z-index: 50;
+}
+
+@keyframes float-up {
+    0% { 
+        transform: translate(-50%, -50%) scale(0) rotate(0deg);
+        opacity: 0;
+    }
+    15% {
+        transform: translate(-50%, -50%) scale(1) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(0) rotate(var(--r));
+        opacity: 0;
+    }
+}
+
+.like-button-detail {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.like-button-detail:hover {
+    transform: translateY(-2px);
+}
+
+.like-button-detail:active {
+    transform: translateY(0px);
+}
+
+.like-button-detail::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(239, 68, 68, 0.3);
+    border-radius: 100%;
+    transform: scale(1);
+    transform-origin: 50% 50%;
+    opacity: 0;
+}
+
+.like-button-detail:focus:not(:focus-visible)::after {
+    animation: ripple 0.6s ease-out;
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(50);
+        opacity: 0;
+    }
+}
+</style>
 
 <script>
 // Image Modal Logic
@@ -424,6 +522,20 @@ setInterval(updateTimestamps, 30000);
 function likePost(event, postId) {
     event.preventDefault();
     
+    // Find the heart icon and count element
+    const heartIcon = event.currentTarget.querySelector('svg');
+    const likeCount = event.currentTarget.querySelector('.like-count');
+    const button = event.currentTarget.querySelector('button');
+    const textSpan = button.querySelector('span:last-child');
+    
+    // Add animation class
+    heartIcon.classList.add('heart-animate');
+    
+    // Create heart particle effect if liking
+    if (!heartIcon.classList.contains('text-blue-500')) {
+        createHeartParticles(button);
+    }
+    
     fetch("/post/" + postId + "/like", {
         method: 'POST',
         headers: {
@@ -433,26 +545,73 @@ function likePost(event, postId) {
     .then(function(response) { return response.json(); })
     .then(function(data) {
         if (data.success) {
-            // Update all like count elements for this post
-            var likeCountElements = document.querySelectorAll(".like-count[data-post-id='" + postId + "']");
-            for (var i = 0; i < likeCountElements.length; i++) {
-                likeCountElements[i].textContent = data.likeCount;
+            // Update like count with animation
+            likeCount.classList.add('count-animate');
+            likeCount.textContent = data.likeCount;
+            
+            // Update button appearance based on liked state
+            if (data.action === 'liked') {
+                heartIcon.classList.add('text-blue-500', 'fill-current');
+                heartIcon.setAttribute('fill', 'currentColor');
+                button.classList.add('bg-blue-100', 'text-blue-500');
+                button.classList.remove('bg-gray-100', 'text-gray-600');
+                if (textSpan) textSpan.textContent = 'Unlike';
+            } else {
+                heartIcon.classList.remove('text-blue-500', 'fill-current');
+                heartIcon.setAttribute('fill', 'none');
+                button.classList.remove('bg-blue-100', 'text-blue-500');
+                button.classList.add('bg-gray-100', 'text-gray-600');
+                if (textSpan) textSpan.textContent = 'Like';
             }
             
-            // Update the like button icon
-            var likeButton = document.querySelector('.like-button svg');
-            if (data.action === 'liked') {
-                likeButton.classList.add('text-red-500', 'fill-current');
-                likeButton.setAttribute('fill', 'currentColor');
-            } else {
-                likeButton.classList.remove('text-red-500', 'fill-current');
-                likeButton.setAttribute('fill', 'none');
-            }
+            // Remove animation classes after animation completes
+            setTimeout(function() {
+                likeCount.classList.remove('count-animate');
+            }, 300);
         }
+        
+        // Remove animation class after animation completes
+        setTimeout(function() {
+            heartIcon.classList.remove('heart-animate');
+        }, 450);
     })
     .catch(function(error) {
         console.error('Error:', error);
+        heartIcon.classList.remove('heart-animate');
     });
+}
+
+// Function to create heart particles
+function createHeartParticles(button) {
+    const count = 5;
+    const buttonRect = button.getBoundingClientRect();
+    const centerX = buttonRect.left + buttonRect.width / 2;
+    const centerY = buttonRect.top + buttonRect.height / 2;
+    
+    for (let i = 0; i < count; i++) {
+        const particle = document.createElement('div');
+        particle.innerHTML = '👍';
+        particle.className = 'heart-particle';
+        
+        // Random position variations
+        const x = (Math.random() - 0.5) * 60; // -30px to 30px
+        const y = -30 - Math.random() * 40; // -30px to -70px
+        const rotation = (Math.random() - 0.5) * 60; // -30deg to 30deg
+        
+        particle.style.setProperty('--x', x + 'px');
+        particle.style.setProperty('--y', y + 'px');
+        particle.style.setProperty('--r', rotation + 'deg');
+        
+        particle.style.left = centerX + 'px';
+        particle.style.top = centerY + 'px';
+        
+        document.body.appendChild(particle);
+        
+        // Remove particle after animation completes
+        setTimeout(function() {
+            document.body.removeChild(particle);
+        }, 1000);
+    }
 }
 </script>
 {% endblock %}

@@ -159,6 +159,104 @@
     .swiping {
         transition: none !important;
     }
+
+    /* Like Button Animation */
+    @keyframes heart-burst {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.3); }
+        100% { transform: scale(1); }
+    }
+
+    .heart-animate {
+        animation: heart-burst 0.45s ease-in-out;
+    }
+
+    /* Like Count Animation */
+    @keyframes count-change {
+        0% { transform: translateY(0); opacity: 1; }
+        20% { transform: translateY(-5px); opacity: 0.8; }
+        100% { transform: translateY(0); opacity: 1; }
+    }
+
+    .count-animate {
+        animation: count-change 0.3s ease-out;
+    }
+
+    /* Heart particles effect */
+    .heart-particle {
+        position: absolute;
+        pointer-events: none;
+        color: #ef4444;
+        font-size: 16px;
+        user-select: none;
+        will-change: transform, opacity;
+        animation: float-up 1s ease-out forwards;
+    }
+
+    @keyframes float-up {
+        0% { 
+            transform: translate(-50%, -50%) scale(0) rotate(0deg);
+            opacity: 0;
+        }
+        15% {
+            transform: translate(-50%, -50%) scale(1) rotate(0deg);
+            opacity: 1;
+        }
+        100% {
+            transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(0) rotate(var(--r));
+            opacity: 0;
+        }
+    }
+
+    /* Heartbeat animation */
+    @keyframes heartbeat {
+        0% { transform: scale(1); }
+        25% { transform: scale(1.1); }
+        40% { transform: scale(1); }
+        60% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+
+    .heartbeat-icon {
+        animation: heartbeat 1.5s ease infinite;
+    }
+
+    /* Carousel indicators */
+    .carousel-indicator.active {
+        background-color: #3b82f6;
+        width: 20px;
+        border-radius: 4px;
+    }
+
+    /* Hide scrollbar for the mobile carousel */
+    .scrollbar-thin {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(203, 213, 225, 0.5) transparent;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+        background-color: rgba(203, 213, 225, 0.5);
+        border-radius: 4px;
+    }
+
+    /* Trending animation */
+    @keyframes trending-pulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.9; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    .trending-icon {
+        animation: trending-pulse 2s ease infinite;
+    }
 </style>
 
 <!-- Add to Home Screen Banner -->
@@ -246,6 +344,157 @@
 </div>
 {% endif %}
 
+<!-- Enhanced Community Favorites Section (only show on first page, no search, no category filter) -->
+{% if most_liked_posts and current_page == 1 and not request.args.get('search') and request.args.get('category', 'All') == 'All' %}
+<div class="relative max-w-7xl mx-auto my-8 md:my-16 px-0 md:px-4">
+    <!-- Bold Background Container -->
+    <div class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl md:rounded-2xl shadow-xl overflow-hidden">
+        <!-- Section Header with Trending Icon -->
+        <div class="relative px-4 sm:px-6 md:px-8 pt-6 md:pt-10 pb-4 md:pb-6">
+            <div class="flex flex-wrap items-center justify-between gap-3 md:gap-5">
+                <div class="flex items-center space-x-4">
+                    <div class="relative bg-gray-700 rounded-full p-3 shadow-inner">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-blue-500 trending-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold text-white">Community Favorites</h2>
+                </div>
+                <div class="py-2 px-5 rounded-full bg-gray-700/50 backdrop-blur-sm shadow-inner">
+                    <div class="text-sm md:text-base font-medium text-gray-200">
+                        Top rated by the community
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile Carousel (Horizontal Scroll) -->
+        <div class="md:hidden overflow-x-auto scrollbar-thin pb-6 px-4 -mx-4 md:mx-0 scroll-smooth w-full">
+            <div class="flex space-x-4 pl-4" style="width: max-content; min-width: 100%;">
+                {% for post in most_liked_posts %}
+                <div class="w-[280px] sm:w-[320px] flex-shrink-0 bg-gray-700 rounded-lg shadow-md overflow-hidden hover:shadow-xl transition transform hover:-translate-y-1" 
+                     onclick="window.location.href='{{ url_for('post', post_id=post.id) }}'">
+                    {% if post.photos[0] %}
+                    <div class="relative h-48 sm:h-52 overflow-hidden">
+                        <img src="{{ url_for('static', filename='uploads/' + post.photos[0].filename) }}"
+                             alt="{{ post.title }}"
+                             class="w-full h-full object-cover">
+                        
+                        <!-- Featured Badge -->
+                        <div class="absolute top-0 left-0 bg-blue-600 text-white px-3 py-1 rounded-br-lg shadow-md">
+                            <div class="flex items-center space-x-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                                </svg>
+                                <span class="text-xs font-medium">
+                                    {% if post.likes is defined %}{{ post.likes.count() }}{% else %}0{% endif %} Votes
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Category Tag -->
+                        <div class="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-md">
+                            {{ post.category }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="p-4 text-gray-100">
+                        <h3 class="font-semibold leading-tight line-clamp-1">{{ post.title }}</h3>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="font-semibold text-blue-300">${{ '%.2f' % post.price }}</span>
+                            <span class="text-xs text-gray-400" data-timestamp="{{ post.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}">
+                                {{ post.created_at.strftime('%m/%d/%Y') }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Desktop Grid Layout -->
+        <div class="hidden md:grid md:grid-cols-3 gap-8 p-8 relative">
+            {% for post in most_liked_posts %}
+            <div class="group bg-gray-700 rounded-lg shadow-md overflow-hidden hover:shadow-xl transition transform hover:-translate-y-1 duration-300" 
+                 onclick="window.location.href='{{ url_for('post', post_id=post.id) }}'">
+                {% if post.photos[0] %}
+                <div class="relative h-48 overflow-hidden">
+                    <img src="{{ url_for('static', filename='uploads/' + post.photos[0].filename) }}"
+                         alt="{{ post.title }}"
+                         class="w-full h-full object-cover transition duration-300 group-hover:scale-105">
+                    
+                    <!-- Trophy Badge -->
+                    <div class="absolute top-3 right-3 bg-gray-900 rounded-md p-1.5 shadow-lg transform group-hover:scale-110 transition-all duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                        </svg>
+                    </div>
+                    
+                    <!-- Like Counter Badge -->
+                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900 to-transparent p-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-1 transition-all duration-300 transform {% if post.id in liked_post_ids %}text-blue-500 fill-current{% endif %}" 
+                                     fill="{% if post.id in liked_post_ids %}currentColor{% else %}none{% endif %}" 
+                                     stroke="currentColor" viewBox="0 0 24 24"
+                                     data-post-id="{{ post.id }}">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                          d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                                </svg>
+                                <span class="text-xs font-medium text-white">
+                                    {% if post.likes is defined %}{{ post.likes.count() }}{% else %}0{% endif %} Community Votes
+                                </span>
+                            </div>
+                            <span class="text-xs font-medium text-white px-2 py-0.5 rounded bg-blue-900/50 backdrop-blur-sm">
+                                {{ post.category }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="p-4 text-gray-100">
+                    <div class="flex justify-between items-start gap-2">
+                        <h3 class="text-lg font-semibold leading-tight line-clamp-1 group-hover:text-blue-300 transition">{{ post.title }}</h3>
+                        <span class="text-lg font-semibold text-blue-300">${{ '%.2f' % post.price }}</span>
+                    </div>
+                    
+                    <p class="mt-2 text-sm text-gray-400 line-clamp-2">{{ post.description }}</p>
+                    
+                    <div class="mt-3 flex justify-between items-center">
+                        <span class="text-xs text-gray-400" data-timestamp="{{ post.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}">
+                            {{ post.created_at.strftime('%m/%d/%Y') }}
+                        </span>
+                        <button class="text-blue-400 text-sm font-medium hover:text-blue-300 transition px-3 py-1 rounded bg-gray-800/50">
+                            View Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Bold Divider -->
+        <div class="px-8 pb-10 pt-4">
+            <div class="flex items-center">
+                <div class="flex-grow h-0.5 bg-gradient-to-r from-transparent via-gray-700 to-transparent"></div>
+                <div class="flex items-center space-x-3 px-5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                    </svg>
+                    <span class="text-sm font-bold tracking-wider uppercase text-blue-400">Featured Items</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                    </svg>
+                </div>
+                <div class="flex-grow h-0.5 bg-gradient-to-r from-transparent via-gray-700 to-transparent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Listings Grid -->
 <div class="max-w-7xl mx-auto">
     <div class="listing-grid">
@@ -319,15 +568,16 @@
                         <div class="flex items-center">
                             <form action="{{ url_for('like_post', post_id=post.id) }}" method="POST" 
                                   onsubmit="likePost(event, {{ post.id }})" class="like-form flex items-center">
-                                <button type="submit" class="like-button flex items-center" 
+                                <button type="submit" class="like-button flex items-center p-1.5 rounded-full hover:bg-gray-100 transition-all duration-200" 
                                         onclick="event.stopPropagation()">
-                                    <svg class="w-4 h-4 mr-1 {% if post.id in liked_post_ids %}text-red-500 fill-current{% endif %}" 
+                                    <svg class="w-4 h-4 mr-1 transition-all duration-300 transform {% if post.id in liked_post_ids %}text-blue-500 fill-current{% endif %}" 
                                          fill="{% if post.id in liked_post_ids %}currentColor{% else %}none{% endif %}" 
-                                         stroke="currentColor" viewBox="0 0 24 24">
+                                         stroke="currentColor" viewBox="0 0 24 24"
+                                         data-post-id="{{ post.id }}">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                              d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
                                     </svg>
-                                    <span class="text-sm like-count" data-post-id="{{ post.id }}">
+                                    <span class="text-sm like-count transition-all duration-300" data-post-id="{{ post.id }}">
                                         {% if post.likes is defined %}
                                             {{ post.likes.count() }}
                                         {% else %}
@@ -707,7 +957,19 @@ function likePost(event, postId) {
     event.preventDefault();
     event.stopPropagation();
     
-    fetch(`/post/${postId}/like`, {
+    // Find the heart icon
+    const heartIcon = event.currentTarget.querySelector('svg');
+    const likeCount = event.currentTarget.querySelector('.like-count');
+    
+    // Add animation class
+    heartIcon.classList.add('heart-animate');
+    
+    // Create heart particle effect if liking
+    if (!heartIcon.classList.contains('text-red-500')) {
+        createHeartParticles(event.currentTarget);
+    }
+    
+    fetch("/post/" + postId + "/like", {
         method: 'POST',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
@@ -717,27 +979,77 @@ function likePost(event, postId) {
     .then(function(data) {
         if (data.success) {
             // Update all like count elements for this post
-            const likeCountElements = document.querySelectorAll(`.like-count[data-post-id="${postId}"]`);
-            likeCountElements.forEach(function(element) {
-                element.textContent = data.likeCount;
-            });
+            const likeCountElements = document.querySelectorAll(".like-count[data-post-id='" + postId + "']");
+            
+            for (var i = 0; i < likeCountElements.length; i++) {
+                // Add animation to the count
+                likeCountElements[i].classList.add('count-animate');
+                likeCountElements[i].textContent = data.likeCount;
+                
+                // Remove animation class after animation completes
+                setTimeout(function() {
+                    for (var j = 0; j < likeCountElements.length; j++) {
+                        likeCountElements[j].classList.remove('count-animate');
+                    }
+                }, 300);
+            }
             
             // Update all like button icons for this post
-            const likeButtons = document.querySelectorAll(`.listing-card[onclick*="${postId}"] .like-button svg`);
-            likeButtons.forEach(function(icon) {
+            const likeButtons = document.querySelectorAll(".listing-card[onclick*='" + postId + "'] .like-button svg");
+            
+            for (var i = 0; i < likeButtons.length; i++) {
                 if (data.action === 'liked') {
-                    icon.classList.add('text-red-500', 'fill-current');
-                    icon.setAttribute('fill', 'currentColor');
+                    likeButtons[i].classList.add('text-red-500', 'fill-current');
+                    likeButtons[i].setAttribute('fill', 'currentColor');
                 } else {
-                    icon.classList.remove('text-red-500', 'fill-current');
-                    icon.setAttribute('fill', 'none');
+                    likeButtons[i].classList.remove('text-red-500', 'fill-current');
+                    likeButtons[i].setAttribute('fill', 'none');
                 }
-            });
+            }
         }
+        
+        // Remove animation class after animation completes
+        setTimeout(function() {
+            heartIcon.classList.remove('heart-animate');
+        }, 450);
     })
     .catch(function(error) {
         console.error('Error:', error);
+        heartIcon.classList.remove('heart-animate');
     });
+}
+
+// Function to create heart particles
+function createHeartParticles(button) {
+    const count = 5;
+    const buttonRect = button.getBoundingClientRect();
+    const centerX = buttonRect.left + buttonRect.width / 2;
+    const centerY = buttonRect.top + buttonRect.height / 2;
+    
+    for (let i = 0; i < count; i++) {
+        const particle = document.createElement('div');
+        particle.innerHTML = '👍';
+        particle.className = 'heart-particle';
+        
+        // Random position variations
+        const x = (Math.random() - 0.5) * 60; // -30px to 30px
+        const y = -30 - Math.random() * 40; // -30px to -70px
+        const rotation = (Math.random() - 0.5) * 60; // -30deg to 30deg
+        
+        particle.style.setProperty('--x', x + 'px');
+        particle.style.setProperty('--y', y + 'px');
+        particle.style.setProperty('--r', rotation + 'deg');
+        
+        particle.style.left = centerX + 'px';
+        particle.style.top = centerY + 'px';
+        
+        document.body.appendChild(particle);
+        
+        // Remove particle after animation completes
+        setTimeout(() => {
+            document.body.removeChild(particle);
+        }, 1000);
+    }
 }
 </script>
 {% endblock %}

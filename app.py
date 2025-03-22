@@ -326,6 +326,44 @@ def index():
         except Exception as e:
             app.logger.error(f"Error getting liked posts: {e}")
             # Just use an empty list if there's an error
+            
+        # Get most liked posts (if the post_like table exists)
+        most_liked_posts = []
+        try:
+            # This query uses SQLAlchemy's ORM functionality to join Post and PostLike
+            # and count the number of likes for each post
+            if not search and category == 'All':
+                inspector = inspect(db.engine)
+                if inspector.has_table('post_like'):
+                    most_liked_posts_query = db.session.query(
+                        Post, db.func.count(PostLike.id).label('like_count')
+                    ).outerjoin(
+                        PostLike, Post.id == PostLike.post_id
+                    ).group_by(
+                        Post.id
+                    ).order_by(
+                        db.desc('like_count'), Post.created_at.desc()
+                    ).limit(3)
+                    
+                    most_liked_posts = [post for post, _ in most_liked_posts_query.all()]
+                    
+                    # Ensure we have at least 3 items even if there aren't many liked posts
+                    if len(most_liked_posts) < 3:
+                        # Add most recent posts to fill up to 3 if needed
+                        ids_to_exclude = [post.id for post in most_liked_posts]
+                        additional_posts = Post.query.filter(~Post.id.in_(ids_to_exclude)).order_by(
+                            Post.created_at.desc()
+                        ).limit(3 - len(most_liked_posts)).all()
+                        
+                        most_liked_posts.extend(additional_posts)
+        except Exception as e:
+            app.logger.error(f"Error getting most liked posts: {e}")
+            # Fallback to recent posts if there's an error with most liked posts
+            try:
+                most_liked_posts = Post.query.order_by(Post.created_at.desc()).limit(3).all()
+            except Exception as inner_e:
+                app.logger.error(f"Error getting fallback recent posts: {inner_e}")
+                most_liked_posts = []
 
     except Exception as e:
         app.logger.error(f"Error in index route: {e}")
@@ -333,6 +371,7 @@ def index():
         total_pages = 1
         current_page = 1
         liked_post_ids = []
+        most_liked_posts = []
 
     return render_template('index.html',
                          posts=posts,
@@ -340,7 +379,8 @@ def index():
                          total_pages=total_pages,
                          search=search,
                          category=category,
-                         liked_post_ids=liked_post_ids)
+                         liked_post_ids=liked_post_ids,
+                         most_liked_posts=most_liked_posts)
 
 @app.route('/post/<int:post_id>', methods=['GET', 'POST'])
 def post(post_id):
@@ -557,6 +597,29 @@ def like_post(post_id):
             return {'success': False, 'error': 'An error occurred while processing your request.'}
         flash('An error occurred while processing your request.', 'error')
         return redirect(url_for('index'))
+
+@app.route('/post/<int:post_id>/like_count', methods=['GET'])
+def get_like_count(post_id):
+    """Get the like count for a post, useful for AJAX updates"""
+    try:
+        # Make sure post_like table exists before attempting to use it
+        ensure_tables_exist()
+        
+        # Get the count of likes for this post
+        like_count = PostLike.query.filter_by(post_id=post_id).count()
+        
+        # Get user_uuid from session for likes
+        user_uuid = session.get('uuid')
+        user_liked = False
+        
+        if user_uuid:
+            # Check if user liked this post
+            user_liked = PostLike.query.filter_by(post_id=post_id, user_uuid=user_uuid).first() is not None
+            
+        return {'success': True, 'likeCount': like_count, 'userLiked': user_liked}
+    except Exception as e:
+        app.logger.error(f"Error in get_like_count route: {e}")
+        return {'success': False, 'error': 'An error occurred while processing your request.'}
 
 # Initialize database tables (including any new ones like PostLike)
 with app.app_context():
